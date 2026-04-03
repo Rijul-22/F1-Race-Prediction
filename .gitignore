@@ -1,0 +1,18 @@
+# Virtual environment
+.venv/
+
+# FastF1 cache (large files)
+data/raw/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
