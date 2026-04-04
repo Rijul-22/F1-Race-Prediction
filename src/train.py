@@ -8,12 +8,12 @@ from sklearn.metrics import mean_absolute_error
 def load_features(path=None):
     if path is None:
         base = os.path.dirname(__file__)
-        path = os.path.join(base, '..', 'data', 'features', 'features_v2.csv')
+        path = os.path.join(base, '..', 'data', 'features', 'features_v4.csv')
     return pd.read_csv(path)
 
 # ── 2. Prepare ────────────────────────────────────────────────────
 def prepare(df):
-    features = ['grid_position', 'driver_recent_form', 'team_performance', 'circuit_avg_finish']
+    features = ['grid_position', 'driver_recent_form', 'team_performance', 'dnf_rate_last5', 'driver_points_before_race']
     target   = 'finish_position'
 
     train = df[df['season'] < 2025].copy()
