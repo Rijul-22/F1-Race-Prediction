@@ -29,29 +29,41 @@ def add_baseline_features(df):
     print("Baseline features added: driver_recent_form, team_performance")
     return df
 
+def add_dnf_probability(df):
+    df.sort_values(by=["driver", "season", "round"], inplace=True)
+
+    df['dnf_rate_last5'] = (
+        df.groupby('driver')['dnf']
+        .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+    )
+
+    print("Added: dnf_rate_last5")
+    return df
+
+def add_driver_points(df):
+    df.sort_values(by=["driver", "season", "round"], inplace=True)
+
+    df['driver_points_before_race'] = (
+        df.groupby(['driver', 'season'])['points']
+        .transform(lambda x: x.shift(1).cumsum().fillna(0))
+    )
+
+    print("Added: driver_points_before_race")
+    return df
+
 def save_features(df, path=None):
     if path is None:
         base = os.path.dirname(__file__)
-        path = os.path.join(base, '..', 'data', 'features', 'features_v2.csv')
+        path = os.path.join(base, '..', 'data', 'features', 'features_v4.csv')
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Saved → {path}")
 
-def add_circuit_performance(df):
-    df.sort_values(by=["driver", "circuit", "season", "round"], inplace=True)
-
-    df['circuit_avg_finish'] = (
-        df.groupby(['driver', 'circuit'])['finish_position']
-        .transform(lambda x: x.shift(1).expanding().mean())
-    )
-
-    print("Added: circuit_avg_finish")
-    return df
-
 if __name__ == "__main__":
     df = load_clean()
     df = add_baseline_features(df)
-    df = add_circuit_performance(df)
+    df = add_dnf_probability(df)
+    df = add_driver_points(df)
     # Re-sort chronologically before saving
     df.sort_values(by=["season", "round", "driver"], inplace=True)
     df.reset_index(drop=True, inplace=True)
