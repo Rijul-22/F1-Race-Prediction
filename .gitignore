@@ -1,8 +1,10 @@
 # Virtual environment
 .venv/
 
-# FastF1 cache (large files)
+# Data files (too large for GitHub)
 data/raw/
+data/processed/
+data/features/
 
 # Python cache
 __pycache__/
@@ -16,3 +18,7 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Test/scratch files
+src/feature_selection.py
+main.py
