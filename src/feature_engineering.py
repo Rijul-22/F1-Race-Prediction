@@ -51,10 +51,19 @@ def add_driver_points(df):
     print("Added: driver_points_before_race")
     return df
 
+def add_standings_position(df):
+    df.sort_values(by=["season", "round", "driver"], inplace=True)
+
+    df['driver_standings_pos'] = df.groupby(['season', 'round'])['driver_points_before_race']\
+        .rank(ascending=False, method='min')
+
+    print("Added: driver_standings_pos")
+    return df
+
 def save_features(df, path=None):
     if path is None:
         base = os.path.dirname(__file__)
-        path = os.path.join(base, '..', 'data', 'features', 'features_v4.csv')
+        path = os.path.join(base, '..', 'data', 'features', 'features_v5.csv')
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Saved → {path}")
@@ -64,6 +73,7 @@ if __name__ == "__main__":
     df = add_baseline_features(df)
     df = add_dnf_probability(df)
     df = add_driver_points(df)
+    df = add_standings_position(df)
     # Re-sort chronologically before saving
     df.sort_values(by=["season", "round", "driver"], inplace=True)
     df.reset_index(drop=True, inplace=True)
