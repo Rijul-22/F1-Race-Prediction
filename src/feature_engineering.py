@@ -60,10 +60,59 @@ def add_standings_position(df):
     print("Added: driver_standings_pos")
     return df
 
+def add_weighted_form(df):
+    df.sort_values(by=["driver", "season", "round"], inplace=True)
+
+    df['weighted_finish_form'] = (
+        df.groupby('driver')['finish_position']
+        .transform(lambda x: x.shift(1).ewm(span=5, min_periods=1).mean())
+    )
+
+    print("Added: weighted_finish_form")
+    return df
+
+def add_position_gain(df):
+    df.sort_values(by=["season", "round", "driver"], inplace=True)
+
+    df['position_gain'] = df['grid_position'] - df['finish_position']
+    df['avg_position_gain'] = (
+        df.groupby('driver')['position_gain']
+        .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+    )
+    print("Added: position_gain")
+    return df
+
+def add_driver_vs_field(df):
+    df.sort_values(by=["driver", "season", "round"], inplace=True)
+    race_avg = df.groupby(['season', 'round'])['finish_position'].transform('mean')
+    df['driver_vs_field'] = df['finish_position'] - race_avg
+    df['driver_vs_field'] = (
+        df.groupby('driver')['driver_vs_field']
+        .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+    )
+    print("Added: driver_vs_field")
+    return df
+
+def add_constructor_standings(df):
+    df.sort_values(by=["team", "season", "round"], inplace=True)
+
+    df['team_points_before_race'] = (
+        df.groupby(['team', 'season'])['points']
+        .transform(lambda x: x.shift(1).cumsum().fillna(0))
+    )
+
+    df.sort_values(by=["season", "round", "team"], inplace=True)
+
+    df['constructor_standings_pos'] = df.groupby(['season', 'round'])['team_points_before_race']\
+        .rank(ascending=False, method='min')
+
+    print("Added: team_points_before_race, constructor_standings_pos")
+    return df
+
 def save_features(df, path=None):
     if path is None:
         base = os.path.dirname(__file__)
-        path = os.path.join(base, '..', 'data', 'features', 'features_v5.csv')
+        path = os.path.join(base, '..', 'data', 'features', 'features_v9.csv')
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Saved → {path}")
@@ -74,6 +123,10 @@ if __name__ == "__main__":
     df = add_dnf_probability(df)
     df = add_driver_points(df)
     df = add_standings_position(df)
+    df = add_weighted_form(df)
+    df = add_position_gain(df)
+    df = add_driver_vs_field(df)
+    df = add_constructor_standings(df)
     # Re-sort chronologically before saving
     df.sort_values(by=["season", "round", "driver"], inplace=True)
     df.reset_index(drop=True, inplace=True)
