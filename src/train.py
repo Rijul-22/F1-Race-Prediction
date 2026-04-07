@@ -117,63 +117,7 @@ def train_xgboost(X_train, y_train, X_test, y_test, train):
 
     return model, mae
 
-# ── 7. Optuna ────────────────────────────────────────────────────────
-# def tune_xgboost(df, features):
-#     import optuna
-#     from xgboost import XGBRegressor
-#
-#     # Optuna train/val split — never touch 2025 test set
-#     opt_train = df[df['season'] <= 2023][features + ['finish_position','season']].dropna()
-#     opt_val   = df[df['season'] == 2024][features + ['finish_position']].dropna()
-#
-#     X_opt_tr  = opt_train[features]
-#     y_opt_tr  = opt_train['finish_position']
-#     X_opt_val = opt_val[features]
-#     y_opt_val = opt_val['finish_position']
-#     w_opt_tr = opt_train['season'].map({2022: 0.2, 2023: 0.5, 2024: 1.0}).values
-#
-#     def objective(trial):
-#         params = dict(
-#             n_estimators     = trial.suggest_int('n_estimators', 100, 800),
-#             max_depth        = trial.suggest_int('max_depth', 2, 6),
-#             learning_rate    = trial.suggest_float('learning_rate', 0.01, 0.2, log=True),
-#             subsample        = trial.suggest_float('subsample', 0.6, 1.0),
-#             colsample_bytree = trial.suggest_float('colsample_bytree', 0.6, 1.0),
-#             min_child_weight = trial.suggest_int('min_child_weight', 1, 10),
-#         )
-#         model = XGBRegressor(**params, random_state=42, verbosity=0)
-#         model.fit(X_opt_tr, y_opt_tr, sample_weight=w_opt_tr)
-#         return mean_absolute_error(y_opt_val, model.predict(X_opt_val))
-#
-#     optuna.logging.set_verbosity(optuna.logging.WARNING)
-#     study = optuna.create_study(direction='minimize')
-#     study.optimize(objective, n_trials=200)
-#
-#     print()
-#     print("=" * 40)
-#     print("OPTUNA TUNING COMPLETE")
-#     print("=" * 40)
-#     print(f"Best val MAE (2024): {study.best_value:.3f}")
-#     print("Best params:")
-#     for k, v in study.best_params.items():
-#         print(f"  {k}: {v}")
-#
-#     return study.best_params
-#
-# def train_xgboost_tuned(X_train, y_train, X_test, y_test, best_params):
-#     from xgboost import XGBRegressor
-#     model = XGBRegressor(**best_params, random_state=42, verbosity=0)
-#     model.fit(X_train, y_train)
-#     preds = model.predict(X_test)
-#     mae   = mean_absolute_error(y_test, preds)
-#     print()
-#     print("=" * 40)
-#     print("XGBOOST TUNED (2025 test)")
-#     print("=" * 40)
-#     print(f"MAE = {mae:.3f}")
-#     return model, mae, preds
-
-# ── 8. Model Stacking ──────────────────────────────────────────────
+# ── 7. Model Stacking ──────────────────────────────────────────────
 def train_stacking(df, features):
     from sklearn.linear_model import Ridge
     from xgboost import XGBRegressor
@@ -280,7 +224,7 @@ def train_stacking(df, features):
 
     return meta, individual_maes, stacking_mae
 
-# ── 9. Target Encoding (P2) ────────────────────────────────────────
+# ── 8. Target Encoding (P2) ────────────────────────────────────────
 def add_target_encoding(df):
     """Add leakage-free driver and team target-encoded features."""
     df = df.copy()
@@ -308,7 +252,7 @@ def add_target_encoding(df):
     df.sort_values(['season', 'round', 'driver'], inplace=True)
     return df
 
-# ── 10. Add extra features for v2 ──────────────────────────────────
+# ── 9. Add extra features for v2 ──────────────────────────────────
 def add_extra_features(df):
     """Add normalized gap_to_pole and intra-season form (leakage-free)."""
     df = df.copy()
@@ -330,7 +274,7 @@ def add_extra_features(df):
     df.sort_values(['season', 'round', 'driver'], inplace=True)
     return df
 
-# ── 11. Stacking v2 — Optuna-tuned + enhanced features ────────────
+# ── 10. Stacking v2 — Optuna-tuned + enhanced features ────────────
 def train_stacking_v2(df, base_features):
     """
     Stacking with:
@@ -467,7 +411,7 @@ def train_stacking_v2(df, base_features):
 
     return stacking_mae, features
 
-# ── 12. Stacking v3 — Harshit's 2.1 MAE Method (Delta + Rank) ──────
+# ── 11. Stacking v3 — Harshit's 2.1 MAE Method (Delta + Rank) ──────
 def train_harshit_delta_model(df, base_features):
     """
     1. Removes DNFs (already done in main)
@@ -570,7 +514,7 @@ def train_harshit_delta_model(df, base_features):
 
     return mae_ranked, features
 
-# ── 13. Run ────────────────────────────────────────────────────────
+# ── 12. Run ────────────────────────────────────────────────────────
 if __name__ == "__main__":
     df = load_features()
     
