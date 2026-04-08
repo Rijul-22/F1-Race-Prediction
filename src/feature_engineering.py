@@ -109,10 +109,53 @@ def add_constructor_standings(df):
     print("Added: team_points_before_race, constructor_standings_pos")
     return df
 
+def add_qualifying_gap(df):
+    base = os.path.dirname(__file__)
+    qual_path = os.path.join(base, '..', 'data', 'processed', 'qualifying_data.csv')
+    qual = pd.read_csv(qual_path)
+    qual = qual.rename(columns={'Driver': 'driver'})
+
+    df = df.merge(qual[['season', 'round', 'driver', 'gap_to_pole']],
+                  on=['season', 'round', 'driver'],
+                  how='left')
+
+    # Fill missing with per-race median
+    df['gap_to_pole'] = (
+        df.groupby(['season', 'round'])['gap_to_pole']
+        .transform(lambda x: x.fillna(x.median()))
+    )
+
+    print(f"Added: gap_to_pole | nulls remaining: {df['gap_to_pole'].isnull().sum()}")
+    return df
+
+def add_teammate_delta(df):
+    df.sort_values(by=["driver", "season", "round"], inplace=True)
+
+    team_avg = df.groupby(['season', 'round', 'team'])['finish_position'].transform('mean')
+    df['teammate_delta'] = df['finish_position'] - team_avg
+
+    df['teammate_delta'] = (
+        df.groupby('driver')['teammate_delta']
+        .transform(lambda x: x.shift(1).rolling(5, min_periods=1).mean())
+    )
+
+    print("Added: teammate_delta")
+    return df
+
+def add_weather(df):
+    base = os.path.dirname(__file__)
+    weather_path = os.path.join(base, '..', 'data', 'processed', 'weather_data.csv')
+    weather = pd.read_csv(weather_path)
+
+    df = df.merge(weather, on=['season', 'round'], how='left')
+
+    print(f"Added: is_wet_race, air_temp | nulls: {df[['is_wet_race', 'air_temp']].isnull().sum().sum()}")
+    return df
+
 def save_features(df, path=None):
     if path is None:
         base = os.path.dirname(__file__)
-        path = os.path.join(base, '..', 'data', 'features', 'features_v9.csv')
+        path = os.path.join(base, '..', 'data', 'features', 'features_v11.csv')
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_csv(path, index=False)
     print(f"Saved → {path}")
@@ -127,6 +170,9 @@ if __name__ == "__main__":
     df = add_position_gain(df)
     df = add_driver_vs_field(df)
     df = add_constructor_standings(df)
+    df = add_qualifying_gap(df)
+    df = add_teammate_delta(df)
+    df = add_weather(df)
     # Re-sort chronologically before saving
     df.sort_values(by=["season", "round", "driver"], inplace=True)
     df.reset_index(drop=True, inplace=True)
