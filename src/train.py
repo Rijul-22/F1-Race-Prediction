@@ -412,7 +412,7 @@ def train_stacking_v2(df, base_features):
     return stacking_mae, features
 
 # ── 11. Stacking v3 — Harshit's 2.1 MAE Method (Delta + Rank) ──────
-def train_harshit_delta_model(df, base_features):
+def train_delta_regression(df, base_features):
     """
     1. Removes DNFs (already done in main)
     2. Target = position_gain (grid - finish)
@@ -470,7 +470,7 @@ def train_harshit_delta_model(df, base_features):
 
     # ── Final 2025 Predictions ──
     print("\n" + "=" * 50)
-    print("STACKING v3 (Harshit's Full Method) -- Test on 2025")
+    print("DELTA REGRESSION WITH RANK NORMALISATION -- Test on 2025")
     print("=" * 50)
 
     test_preds_raw = {}
@@ -543,7 +543,7 @@ if __name__ == "__main__":
     stacking_v2_mae, v2_features = train_stacking_v2(df, features)
     
     # ── V3 Stacking (Harshit's methodology: Delta + Rank) ──
-    stacking_v3_mae, _ = train_harshit_delta_model(df, features)
+    delta_regression_mae, _ = train_delta_regression(df, features)
 
     print("\n" + "=" * 60)
     print("FULL COMPARISON")
@@ -554,5 +554,5 @@ if __name__ == "__main__":
     print(f"  XGBoost:                     MAE = {mae_xg:.3f}")
     print(f"  Stacking v1 (8 features):    MAE = {stacking_v1_mae:.3f}")
     print(f"  Stacking v2 (12 feat+tuned): MAE = {stacking_v2_mae:.3f}")
-    print(f"  Harshit's Method (Delta+Rnk):MAE = {stacking_v3_mae:.3f}")
+    print(f"  Delta Regression + Rank Norm:MAE = {delta_regression_mae:.3f}")
     print("=" * 60)
