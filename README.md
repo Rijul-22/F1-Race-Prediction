@@ -29,7 +29,7 @@ F1 Race Prediction/
 │   ├── train.py              # Model training & evaluation
 │   └── evaluate.py           # Evaluation metrics
 ├── dashboard/
-│   └── app.py        # Streamlit dashboard (coming soon)
+│   └── app.py        # Streamlit dashboard
 ├── outputs/
 │   ├── models/       # Saved model files
 │   ├── plots/        # EDA & result charts
@@ -86,6 +86,10 @@ Features are added **one at a time** and kept only if they improve MAE without c
 | `team_performance` | Team rolling avg finish (last 3 races) | ✅ Kept |
 | `dnf_rate_last5` | Driver DNF rate over last 5 races | ✅ Kept |
 | `driver_points_before_race` | Cumulative driver points before each race | ✅ Kept |
+| `driver_target_enc` | Driver target encoded past finishes | ✅ Kept |
+| `team_target_enc` | Team target encoded past finishes | ✅ Kept |
+| `gap_to_pole_norm` | Normalized gap to pole per race | ✅ Kept |
+| `intra_season_form` | Rolling avg of current season (last 3 races) | ✅ Kept |
 | `circuit_avg_finish` | Driver avg finish at specific circuit | ❌ Discarded (data loss) |
 
 ### Golden rule — no data leakage:
@@ -101,11 +105,16 @@ df.groupby('driver')['finish_position']
 
 | Model | MAE |
 |---|---|
-| Baseline — grid position only | 3.322 |
-| Baseline — recent form only | 3.820 |
-| Linear Regression (all features) | 3.255 |
+| Baseline — grid position only | ~2.600 |
+| Linear Regression | ~2.500 |
+| Random Forest | ~2.500 |
+| XGBoost | ~2.450 |
+| Stacking v1 (8 features) | ~2.400 |
+| Stacking v2 (12 features + Optuna tuning) | ~2.300 |
+| Delta Regression + Rank Normalization | **2.225** |
 
-> MAE = Mean Absolute Error in finishing positions. An MAE of 3.255 means predictions are off by ~3.3 places on average.
+> MAE = Mean Absolute Error in finishing positions. 
+> To ensure a high-fidelity continuous metric, drivers who DNF (Did Not Finish) are excluded from the test evaluation, and final predictions use a Delta Regression approach with in-race rank normalization.
 
 ---
 
@@ -116,9 +125,10 @@ df.groupby('driver')['finish_position']
 | `fastf1` | F1 data source |
 | `pandas` | Data manipulation |
 | `scikit-learn` | ML models & metrics |
-| `xgboost` | Gradient boosting model |
+| `xgboost` / `lightgbm` / `catboost` | Gradient boosting models |
+| `optuna` | Hyperparameter tuning |
 | `matplotlib/seaborn` | Visualisation |
-| `streamlit` | Dashboard (coming soon) |
+| `streamlit` | Interactive Dashboard |
 
 ---
 
@@ -127,9 +137,11 @@ df.groupby('driver')['finish_position']
 - [x] Data collection & preprocessing
 - [x] Baseline feature engineering
 - [x] Linear Regression baseline model
-- [ ] Feature selection with Random Forest importance
-- [ ] XGBoost model
-- [ ] Streamlit dashboard
+- [x] Feature selection with Random Forest importance
+- [x] Integration of XGBoost, LightGBM, and CatBoost
+- [x] Hyperparameter tuning pipeline (Optuna)
+- [x] Advanced methods (Delta Regression + Rank Normalization)
+- [x] Interactive Streamlit dashboard
 - [ ] Per-race prediction reports
 
 ---
