@@ -514,7 +514,7 @@ def train_delta_regression(df, base_features):
 if __name__ == "__main__":
     df = load_features()
     
-    # --- HARSHIT'S METHOD: REMOVE ALL DNFs BEFORE EVALUATION ---
+    # --- DELTA REGRESSION METHOD: REMOVE ALL DNFs BEFORE EVALUATION ---
     total_before = len(df)
     df = df[df['dnf'] == 0].copy()
     print("=" * 60)
@@ -538,7 +538,7 @@ if __name__ == "__main__":
     # ── V2 Stacking (enhanced features + Optuna-tuned absolute predict) ──
     stacking_v2_mae, v2_features = train_stacking_v2(df, features)
     
-    # ── V3 Stacking (Harshit's methodology: Delta + Rank) ──
+    # ── V3 Stacking (Delta Regression + Rank Normalisation) ──
     delta_regression_mae, _ = train_delta_regression(df, features)
 
     print("\n" + "=" * 60)
