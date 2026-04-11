@@ -109,8 +109,8 @@ with tab1:
         text=[f"{v:.3f}" for v in sorted_results.values()],
         textposition='outside',
     ))
-    fig.add_hline(y=2.0, line_dash="dash", line_color="green",
-                  annotation_text="Target MAE = 2.0")
+#    fig.add_hline(y=2.0, line_dash="dash", line_color="green",
+#                  annotation_text="Target MAE = 2.0")
     fig.update_layout(yaxis_title="MAE", height=400, margin=dict(t=30, b=30))
     st.plotly_chart(fig, use_container_width=True)
 
@@ -358,7 +358,7 @@ with tab4:
             textposition='outside',
         ))
         
-        fig_hp.add_hline(y=2.0, line_dash="dash", line_color="green", annotation_text="Target MAE")
+#        fig_hp.add_hline(y=2.0, line_dash="dash", line_color="green", annotation_text="Target MAE")
         fig_hp.update_layout(yaxis_title="Best CV MAE", height=400, margin=dict(t=30, b=30))
         st.plotly_chart(fig_hp, use_container_width=True)
         
