@@ -98,40 +98,122 @@ tab1, tab2, tab3 = st.tabs(["📊 Model Comparison", "🔬 Feature Importance", 
 # TAB 1: Model Comparison
 # ══════════════════════════════════════════════════════════════════
 with tab1:
-    # Sort by MAE
     sorted_results = dict(sorted(results.items(), key=lambda x: x[1]))
+    best_model = list(sorted_results.keys())[0]
 
-    col1, col2 = st.columns([1.2, 2])
+    st.subheader("Model MAE Comparison")
+    fig = go.Figure()
+    colors = ['#e10600' if m == best_model else '#2c3e50' for m in sorted_results.keys()]
+    fig.add_trace(go.Bar(
+        x=list(sorted_results.keys()),
+        y=list(sorted_results.values()),
+        marker_color=colors,
+        text=[f"{v:.3f}" for v in sorted_results.values()],
+        textposition='outside',
+    ))
+    fig.add_hline(y=2.0, line_dash="dash", line_color="green",
+                  annotation_text="Target MAE = 2.0")
+    fig.update_layout(yaxis_title="MAE", height=400, margin=dict(t=30, b=30))
+    st.plotly_chart(fig, use_container_width=True)
 
-    with col1:
-        st.subheader("Model MAE Scores")
-        table_data = pd.DataFrame({
-            'Model': sorted_results.keys(),
-            'MAE': [f"{v:.3f}" for v in sorted_results.values()],
-            'Rank': range(1, len(sorted_results) + 1)
-        })
-        st.dataframe(table_data, use_container_width=True, hide_index=True)
+    st.divider()
 
-        best_model = list(sorted_results.keys())[0]
-        best_mae = list(sorted_results.values())[0]
-        st.metric("🏆 Best Model", best_model, f"MAE = {best_mae:.3f}")
+    # ── Per-model deep dive ───────────────────────────────────────
+    st.subheader("Model Deep Dive")
+    selected_model = st.selectbox(
+        "Select a model to inspect",
+        [m for m in sorted_results.keys() if m not in
+         ['Baseline (Grid Position)', 'Delta Regression + Rank Norm']]
+    )
 
-    with col2:
-        st.subheader("MAE Comparison")
-        fig = go.Figure()
-        colors = ['#e10600' if m == best_model else '#2c3e50' for m in sorted_results.keys()]
-        fig.add_trace(go.Bar(
-            x=list(sorted_results.keys()),
-            y=list(sorted_results.values()),
-            marker_color=colors,
-            text=[f"{v:.3f}" for v in sorted_results.values()],
-            textposition='outside',
+    model = trained[selected_model]
+    preds = model.predict(X_test)
+
+    # Rank predictions within each race
+    tmp = test_df[['season', 'round']].copy()
+    tmp['raw'] = preds
+    tmp['ranked'] = tmp.groupby(['season', 'round'])['raw'].rank(method='first').astype(float)
+    ranked_preds = tmp['ranked'].values
+    actual = y_test.values
+    errors = ranked_preds - actual
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("MAE", f"{sorted_results[selected_model]:.3f}")
+    col2.metric("Mean Error", f"{errors.mean():.3f}", help="Positive = predicting too high")
+    col3.metric("Std of Errors", f"{errors.std():.3f}")
+
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        st.markdown("**Predicted vs Actual Finish Position**")
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(
+            x=actual, y=ranked_preds,
+            mode='markers',
+            marker=dict(color='#2c3e50', opacity=0.4, size=5),
+            name='Predictions'
         ))
-        fig.add_hline(y=2.0, line_dash="dash", line_color="green",
-                      annotation_text="Target MAE = 2.0")
-        fig.update_layout(yaxis_title="MAE", height=450,
-                          margin=dict(t=30, b=30))
-        st.plotly_chart(fig, use_container_width=True)
+        fig2.add_trace(go.Scatter(
+            x=[1, 20], y=[1, 20],
+            mode='lines',
+            line=dict(color='#e10600', dash='dash', width=1.5),
+            name='Perfect prediction'
+        ))
+        fig2.update_layout(
+            xaxis_title="Actual Position",
+            yaxis_title="Predicted Position",
+            height=380,
+            margin=dict(t=20, b=20),
+            showlegend=True
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+
+    with col_b:
+        st.markdown("**Prediction Error Distribution**")
+        fig3 = go.Figure()
+        fig3.add_trace(go.Histogram(
+            x=errors,
+            nbinsx=30,
+            marker_color='#e10600',
+            opacity=0.8,
+            name='Errors'
+        ))
+        fig3.add_vline(x=0, line_dash="dash", line_color="#2c3e50", line_width=1.5)
+        fig3.update_layout(
+            xaxis_title="Prediction Error (Predicted − Actual)",
+            yaxis_title="Count",
+            height=380,
+            margin=dict(t=20, b=20)
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+
+    # ── Best and worst predicted races ───────────────────────────
+    st.markdown("**Best and Worst Predicted Races (2025)**")
+    tmp2 = test_df[['season', 'round', 'driver']].copy()
+    tmp2['actual'] = actual
+    tmp2['predicted'] = ranked_preds
+    tmp2['abs_error'] = np.abs(errors)
+
+    race_mae = (tmp2.groupby(['season', 'round'])['abs_error']
+                .mean()
+                .reset_index()
+                .rename(columns={'abs_error': 'race_mae'})
+                .sort_values('race_mae'))
+
+    col_c, col_d = st.columns(2)
+    with col_c:
+        st.markdown("🟢 **5 Best Predicted Races**")
+        st.dataframe(race_mae.head(5).rename(columns={
+            'season': 'Season', 'round': 'Round', 'race_mae': 'MAE'
+        }).assign(MAE=lambda x: x['MAE'].round(3)),
+        hide_index=True, use_container_width=True)
+
+    with col_d:
+        st.markdown("🔴 **5 Worst Predicted Races**")
+        st.dataframe(race_mae.tail(5).sort_values('race_mae', ascending=False).rename(columns={
+            'season': 'Season', 'round': 'Round', 'race_mae': 'MAE'
+        }).assign(MAE=lambda x: x['MAE'].round(3)),
+        hide_index=True, use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════
 # TAB 2: Feature Importance
