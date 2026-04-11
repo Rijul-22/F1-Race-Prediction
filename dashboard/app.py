@@ -48,15 +48,13 @@ def train_all_models(df):
 
     models = {
         'Linear Regression': LinearRegression(),
-        'Random Forest': RandomForestRegressor(n_estimators=200, max_depth=5,
-                                                min_samples_leaf=8, random_state=42),
-        'XGBoost': XGBRegressor(n_estimators=300, max_depth=4, learning_rate=0.08,
-                                subsample=0.8, colsample_bytree=0.8,
-                                random_state=42, verbosity=0),
-        'LightGBM': LGBMRegressor(n_estimators=300, max_depth=5, learning_rate=0.08,
-                                   subsample=0.8, colsample_bytree=0.8,
-                                   random_state=42, verbose=-1),
-        'CatBoost': CatBoostRegressor(iterations=300, depth=5, learning_rate=0.08,
+        'Random Forest': RandomForestRegressor(n_estimators=100, max_depth=6,
+                                                min_samples_leaf=2, random_state=42),
+        'XGBoost': XGBRegressor(n_estimators=50, max_depth=2, learning_rate=0.2,
+                                subsample=0.6, random_state=42, verbosity=0),
+        'LightGBM': LGBMRegressor(n_estimators=500, max_depth=3, learning_rate=0.01,
+                                   subsample=0.6, random_state=42, verbose=-1),
+        'CatBoost': CatBoostRegressor(iterations=200, depth=4, learning_rate=0.05,
                                        random_seed=42, verbose=0),
     }
 
@@ -92,7 +90,7 @@ df = load_data()
 with st.spinner("Training models (cached)..."):
     trained, results, test_df, X_test, y_test = train_all_models(df)
 
-tab1, tab2, tab3 = st.tabs(["📊 Model Comparison", "🔬 Feature Importance", "🏁 Race Predictor"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Model Comparison", "🔬 Feature Importance", "🏁 Race Predictor", "⚙️ Hyperparameter Tuning"])
 
 # ══════════════════════════════════════════════════════════════════
 # TAB 1: Model Comparison
@@ -214,6 +212,22 @@ with tab1:
             'season': 'Season', 'round': 'Round', 'race_mae': 'MAE'
         }).assign(MAE=lambda x: x['MAE'].round(3)),
         hide_index=True, use_container_width=True)
+    # ── Hyperparameter Comparison Table ──────────────────────────
+    st.divider()
+    st.subheader("Hyperparameter Comparison")
+
+    import pandas as pd
+    hyperparam_data = {
+        "Hyperparameter":    ["n_estimators/iterations", "max_depth/depth", "learning_rate", "subsample", "min_samples_leaf", "sample_weight"],
+        "Linear Regression": ["N/A",                      "N/A",             "N/A",           "N/A",       "N/A",              "Season weights"],
+        "Random Forest":     ["100",                      "6",               "N/A",           "N/A",       "2",                "Season weights"],
+        "XGBoost":           ["50",                       "2",               "0.2",           "0.6",       "N/A",              "Season weights"],
+        "LightGBM":          ["500",                      "3",               "0.01",          "0.6",       "N/A",              "Season weights"],
+        "CatBoost":          ["200",                      "4",               "0.05",          "N/A",       "N/A",              "Season weights"],
+    }
+    hp_df = pd.DataFrame(hyperparam_data).set_index("Hyperparameter")
+    st.dataframe(hp_df, use_container_width=True)
+
 
 # ══════════════════════════════════════════════════════════════════
 # TAB 2: Feature Importance
@@ -313,3 +327,70 @@ with tab3:
                     st.metric("Race MAE (excl. DNFs)", f"{mae:.2f}")
                 else:
                     st.warning("No valid finishers (non-DNFs) to calculate MAE.")
+
+# ══════════════════════════════════════════════════════════════════
+# TAB 4: Hyperparameter Tuning
+# ══════════════════════════════════════════════════════════════════
+with tab4:
+    st.subheader("Hyperparameter Tuning Results")
+    st.markdown("Interactive comparison of our tuned models and optimal parameters discovered via `GridSearchCV`.")
+    
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    csv_path = os.path.join(base_dir, 'outputs', 'hyperparam_results.csv')
+    
+    if os.path.exists(csv_path):
+        results_df = pd.read_csv(csv_path)
+        
+        # ── 1. Interactive Bar Chart ──
+        model_best_maes = results_df.groupby('Model')['Best MAE'].first().sort_values()
+        
+        # Identify the absolute best among tuned models
+        best_tuned_model = model_best_maes.index[0]
+        
+        fig_hp = go.Figure()
+        colors_hp = ['#e10600' if m == best_tuned_model else '#2c3e50' for m in model_best_maes.index]
+        
+        fig_hp.add_trace(go.Bar(
+            x=model_best_maes.index,
+            y=model_best_maes.values,
+            marker_color=colors_hp,
+            text=[f"{v:.3f}" for v in model_best_maes.values],
+            textposition='outside',
+        ))
+        
+        fig_hp.add_hline(y=2.0, line_dash="dash", line_color="green", annotation_text="Target MAE")
+        fig_hp.update_layout(yaxis_title="Best CV MAE", height=400, margin=dict(t=30, b=30))
+        st.plotly_chart(fig_hp, use_container_width=True)
+        
+        st.divider()
+        
+        # ── 2. Parameter Deep Dive ──
+        st.subheader("Tuned Parameter Deep Dive")
+        st.markdown("Select a tuned model to examine its optimal configuration.")
+        
+        col_sel, _ = st.columns([1, 2])
+        with col_sel:
+            selected_model_hp = st.selectbox("Model", results_df['Model'].unique(), key='hp_select', label_visibility='collapsed')
+        
+        model_df = results_df[results_df['Model'] == selected_model_hp]
+        best_mae_val = model_df['Best MAE'].iloc[0]
+        
+        # Draw metric cards for the hyperparameters
+        st.markdown(f"#### Optimal Params found for {selected_model_hp} <span style='font-size:0.9em;color:#888;'>(Score: {best_mae_val:.3f})</span>", unsafe_allow_html=True)
+        
+        param_cols = st.columns(len(model_df))
+        for i, (_, row) in enumerate(model_df.iterrows()):
+            param_cols[i].metric(label=row['Param'], value=str(row['Best Value']))
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**Search Grid Space Evaluated**")
+        
+        # Pretty table for the evaluated grid
+        st.dataframe(
+            model_df[['Param', 'Values Tried', 'Best Value']], 
+            use_container_width=True, 
+            hide_index=True
+        )
+        
+    else:
+        st.info("Hyperparameter results CSV not found. Ensure the tuning script was run.")

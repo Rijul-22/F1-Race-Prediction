@@ -74,7 +74,7 @@ def train_linear(X_train, y_train, X_test, y_test, train):
 
 # ── 5. Train Random Forest ────────────────────────────────────
 def train_random_forest(X_train, y_train, X_test, y_test, train):
-    model = RandomForestRegressor(n_estimators=100, max_depth=4, min_samples_leaf=10, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, max_depth=6, min_samples_leaf=2, random_state=42)
     weights = train['season'].map({2022: 0.2, 2023: 0.5, 2024: 1.0}).values
     model.fit(X_train, y_train, sample_weight=weights)
     train_preds = model.predict(X_train)
@@ -97,7 +97,7 @@ def train_random_forest(X_train, y_train, X_test, y_test, train):
 # ── 6. Train XGBoost ────────────────────────────────────
 def train_xgboost(X_train, y_train, X_test, y_test, train):
     from xgboost import XGBRegressor
-    model = XGBRegressor(n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42, verbosity=0)
+    model = XGBRegressor(n_estimators=50, max_depth=2, learning_rate=0.2, subsample=0.6, random_state=42, verbosity=0)
     weights = train['season'].map({2022: 0.2, 2023: 0.5, 2024: 1.0}).values
     model.fit(X_train, y_train, sample_weight=weights)
     train_preds = model.predict(X_train)
@@ -144,15 +144,13 @@ def train_stacking(df, features):
     # ── Base models ──
     base_models = {
         'LR': LinearRegression(),
-        'RF': RandomForestRegressor(n_estimators=200, max_depth=5,
-                                     min_samples_leaf=8, random_state=42),
-        'XGB': XGBRegressor(n_estimators=300, max_depth=4, learning_rate=0.08,
-                            subsample=0.8, colsample_bytree=0.8,
-                            random_state=42, verbosity=0),
-        'LGBM': LGBMRegressor(n_estimators=300, max_depth=5, learning_rate=0.08,
-                               subsample=0.8, colsample_bytree=0.8,
-                               random_state=42, verbose=-1),
-        'CatBoost': CatBoostRegressor(iterations=300, depth=5, learning_rate=0.08,
+        'RF': RandomForestRegressor(n_estimators=100, max_depth=6,
+                                     min_samples_leaf=2, random_state=42),
+        'XGB': XGBRegressor(n_estimators=50, max_depth=2, learning_rate=0.2,
+                            subsample=0.6, random_state=42, verbosity=0),
+        'LGBM': LGBMRegressor(n_estimators=500, max_depth=3, learning_rate=0.01,
+                               subsample=0.6, random_state=42, verbose=-1),
+        'CatBoost': CatBoostRegressor(iterations=200, depth=4, learning_rate=0.05,
                                        random_seed=42, verbose=0),
     }
 
@@ -189,18 +187,16 @@ def train_stacking(df, features):
         if name == 'LR':
             m = LinearRegression()
         elif name == 'RF':
-            m = RandomForestRegressor(n_estimators=200, max_depth=5,
-                                       min_samples_leaf=8, random_state=42)
+            m = RandomForestRegressor(n_estimators=100, max_depth=6,
+                                       min_samples_leaf=2, random_state=42)
         elif name == 'XGB':
-            m = XGBRegressor(n_estimators=300, max_depth=4, learning_rate=0.08,
-                             subsample=0.8, colsample_bytree=0.8,
-                             random_state=42, verbosity=0)
+            m = XGBRegressor(n_estimators=50, max_depth=2, learning_rate=0.2,
+                             subsample=0.6, random_state=42, verbosity=0)
         elif name == 'LGBM':
-            m = LGBMRegressor(n_estimators=300, max_depth=5, learning_rate=0.08,
-                              subsample=0.8, colsample_bytree=0.8,
-                              random_state=42, verbose=-1)
+            m = LGBMRegressor(n_estimators=500, max_depth=3, learning_rate=0.01,
+                              subsample=0.6, random_state=42, verbose=-1)
         else:
-            m = CatBoostRegressor(iterations=300, depth=5, learning_rate=0.08,
+            m = CatBoostRegressor(iterations=200, depth=4, learning_rate=0.05,
                                    random_seed=42, verbose=0)
         m.fit(X_full, y_full, sample_weight=w_full)
         preds = m.predict(X_test)
@@ -360,11 +356,11 @@ def train_stacking_v2(df, base_features):
     base_configs = {
         'LR':       lambda: LinearRegression(),
         'RF':       lambda: RandomForestRegressor(
-                        n_estimators=200, max_depth=5, min_samples_leaf=8, random_state=42),
+                        n_estimators=100, max_depth=6, min_samples_leaf=2, random_state=42),
         'XGB':      lambda: XGBRegressor(**bp_xgb, random_state=42, verbosity=0),
         'LGBM':     lambda: LGBMRegressor(**bp_lgbm, random_state=42, verbose=-1),
         'CatBoost': lambda: CatBoostRegressor(
-                        iterations=300, depth=5, learning_rate=0.08,
+                        iterations=200, depth=4, learning_rate=0.05,
                         random_seed=42, verbose=0),
     }
 
@@ -411,7 +407,7 @@ def train_stacking_v2(df, base_features):
 
     return stacking_mae, features
 
-# ── 11. Stacking v3 — Harshit's 2.1 MAE Method (Delta + Rank) ──────
+# ── 11. Stacking v3 — Delta Regression Method (Delta + Rank) ──────
 def train_delta_regression(df, base_features):
     """
     1. Removes DNFs (already done in main)
@@ -451,10 +447,10 @@ def train_delta_regression(df, base_features):
 
     # Base models (using tuned params from earlier)
     base_configs = {
-        'RF':       lambda: RandomForestRegressor(n_estimators=300, max_depth=6, min_samples_leaf=2, random_state=42),
-        'XGB':      lambda: XGBRegressor(n_estimators=400, max_depth=4, learning_rate=0.05, subsample=0.8, random_state=42, verbosity=0),
-        'LGBM':     lambda: LGBMRegressor(n_estimators=400, max_depth=5, learning_rate=0.04, subsample=0.8, random_state=42, verbose=-1),
-        'CatBoost': lambda: CatBoostRegressor(iterations=400, depth=5, learning_rate=0.05, random_seed=42, verbose=0),
+        'RF':       lambda: RandomForestRegressor(n_estimators=100, max_depth=6, min_samples_leaf=2, random_state=42),
+        'XGB':      lambda: XGBRegressor(n_estimators=50, max_depth=2, learning_rate=0.2, subsample=0.6, random_state=42, verbosity=0),
+        'LGBM':     lambda: LGBMRegressor(n_estimators=500, max_depth=3, learning_rate=0.01, subsample=0.6, random_state=42, verbose=-1),
+        'CatBoost': lambda: CatBoostRegressor(iterations=200, depth=4, learning_rate=0.05, random_seed=42, verbose=0),
     }
 
     # ── OOF Meta-learner Training ──

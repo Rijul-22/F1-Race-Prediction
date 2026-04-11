@@ -1,0 +1,39 @@
+// F1 Prediction Pipeline
+digraph {
+	fontname=Helvetica rankdir=TB size="10,12" splines=ortho
+	node [fontcolor=white fontname=Helvetica fontsize=12 shape=box style="filled,rounded"]
+	API [label="FastF1 API
+(Race sessions, 2022-2025)" color="#8b0000" fillcolor="#8b0000"]
+	RAW [label="Raw data collection
+(1829 rows - 20 drivers per race)" color="#555555" fillcolor="#555555"]
+	CLEAN [label="Data cleaning & Filtering
+(Drop ALL DNFs, status_eval, 20 finish_pos)" color="#555555" fillcolor="#555555"]
+	FE [label="Feature engineering
+(target_encodings, gap_to_pole_norm, intra_season_form,
+grid_position, weighted_finish_form, etc.)" color="#2b2b80" fillcolor="#2b2b80"]
+	TRAIN [label="Train set
+(Seasons 2022-2024)" color="#196f3d" fillcolor="#196f3d"]
+	TEST [label="Test set
+(Season 2025 only)" color="#873600" fillcolor="#873600"]
+	TARGET [label="Target Transformation
+(Predict Delta = grid_position - finish_position)" color="#b7950b" fillcolor="#b7950b"]
+	WEIGHTS [label="Season weighting
+(2022=0.2, 2023=0.5, 2024=1.0)" color="#196f3d" fillcolor="#196f3d"]
+	MODEL [label="Model ensemble (stacking)
+(LR, RF, XGBoost, LightGBM, CatBoost -> Ridge meta)" color="#2b2b80" fillcolor="#2b2b80"]
+	POST [label="Rank Post-Processing
+(Convert raw finish pos to 1-20 integer ranks per race)" color="#b7950b" fillcolor="#b7950b"]
+	EVAL [label="Evaluation
+(MAE on 2025 test set: 2.225)" color="#145a32" fillcolor="#145a32"]
+	API -> RAW
+	RAW -> CLEAN
+	CLEAN -> FE
+	FE -> TRAIN
+	FE -> TEST
+	TRAIN -> TARGET
+	TARGET -> WEIGHTS
+	WEIGHTS -> MODEL
+	TEST -> MODEL
+	MODEL -> POST
+	POST -> EVAL
+}
