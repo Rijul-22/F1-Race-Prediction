@@ -212,21 +212,6 @@ with tab1:
             'season': 'Season', 'round': 'Round', 'race_mae': 'MAE'
         }).assign(MAE=lambda x: x['MAE'].round(3)),
         hide_index=True, use_container_width=True)
-    # ── Hyperparameter Comparison Table ──────────────────────────
-    st.divider()
-    st.subheader("Hyperparameter Comparison")
-
-    import pandas as pd
-    hyperparam_data = {
-        "Hyperparameter":    ["n_estimators/iterations", "max_depth/depth", "learning_rate", "subsample", "min_samples_leaf", "sample_weight"],
-        "Linear Regression": ["N/A",                      "N/A",             "N/A",           "N/A",       "N/A",              "Season weights"],
-        "Random Forest":     ["100",                      "6",               "N/A",           "N/A",       "2",                "Season weights"],
-        "XGBoost":           ["50",                       "2",               "0.2",           "0.6",       "N/A",              "Season weights"],
-        "LightGBM":          ["500",                      "3",               "0.01",          "0.6",       "N/A",              "Season weights"],
-        "CatBoost":          ["200",                      "4",               "0.05",          "N/A",       "N/A",              "Season weights"],
-    }
-    hp_df = pd.DataFrame(hyperparam_data).set_index("Hyperparameter")
-    st.dataframe(hp_df, use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════
