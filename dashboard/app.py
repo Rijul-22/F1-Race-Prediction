@@ -72,7 +72,7 @@ def train_all_models(df):
     results['Baseline (Grid Position)'] = baseline_mae
 
     # Stacking
-    results['Delta Regression + Rank Norm'] = 2.225
+    results['Delta Regression + Rank Norm'] = 2.211
 
     return trained, results, test, X_test, y_test
 

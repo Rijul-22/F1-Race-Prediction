@@ -105,13 +105,13 @@ df.groupby('driver')['finish_position']
 
 | Model | MAE |
 |---|---|
-| Baseline — grid position only | ~2.600 |
-| Linear Regression | ~2.500 |
-| Random Forest | ~2.500 |
-| XGBoost | ~2.450 |
-| Stacking v1 (8 features) | ~2.400 |
-| Stacking v2 (12 features + Optuna tuning) | ~2.300 |
-| Delta Regression + Rank Normalization | **2.225** |
+| Baseline — grid position only | ~2.780 |
+| Linear Regression | ~2.338 |
+| Random Forest | ~2.363 |
+| XGBoost | ~2.410 |
+| Stacking v1 (8 features) | ~2.352 |
+| Stacking v2 (12 features + Optuna tuning) | ~2.375 |
+| Delta Regression + Rank Normalization | **2.211** |
 
 > MAE = Mean Absolute Error in finishing positions. 
 > To ensure a high-fidelity continuous metric, drivers who DNF (Did Not Finish) are excluded from the test evaluation, and final predictions use a Delta Regression approach with in-race rank normalization.

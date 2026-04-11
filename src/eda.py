@@ -73,7 +73,7 @@ def plot_mae_progression():
     """
     models = ['Baseline\n(Grid Pos)', 'Linear\nRegression', 'Random\nForest',
               'XGBoost', 'Stacking\nv1', 'Stacking\nv2', "Delta+\nRank Norm"]
-    maes = [2.780, 2.338, 2.340, 2.387, 2.352, 2.360, 2.225]
+    maes = [2.780, 2.338, 2.363, 2.410, 2.352, 2.375, 2.211]
     colors = ['#95a5a6'] * 4 + ['#3498db', '#3498db'] + ['#e10600']
 
     fig, ax = plt.subplots(figsize=(10, 5))
